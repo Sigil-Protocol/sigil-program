@@ -16,7 +16,7 @@ pub struct CreateIdentity<'info> {
         seeds = [DID_METHOD, payer.key().as_ref()],
         bump,
         payer = payer,
-        space = 8 + std::mem::size_of::<Identity>()
+        space = 8 + std::mem::size_of::<Identity>() + (32 * 4) + 32 + 1
     )]
     pub identity: Box<Account<'info, Identity>>,
 

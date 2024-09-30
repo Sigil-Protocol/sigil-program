@@ -32,4 +32,35 @@ pub mod sigil {
         ctx.accounts
             .handler(metadata_uri, metadata_merkle_root, ctx.bumps.identity)
     }
+
+    pub fn add_recovery_account(
+        ctx: Context<AddRecoveryAccount>,
+        recovery_account: Pubkey,
+    ) -> Result<()> {
+        ctx.accounts.handler(recovery_account)
+    }
+
+    pub fn remove_recovery_account(
+        ctx: Context<RemoveRecoveryAccount>,
+        recovery_account: Pubkey,
+    ) -> Result<()> {
+        ctx.accounts.handler(recovery_account)
+    }
+
+    pub fn recover(ctx: Context<RecoverAccount>) -> Result<()> {
+        ctx.accounts.handler()
+    }
+
+    pub fn create_asset(
+        ctx: Context<CreateAsset>,
+        nonce_string: String,
+        owner: Pubkey,
+        metadata_uri: String,
+    ) -> Result<()> {
+        ctx.accounts.handler(owner, ctx.bumps.asset, metadata_uri)
+    }
+
+    pub fn transfer_asset(ctx: Context<TransferAsset>, recipient: Pubkey) -> Result<()> {
+        ctx.accounts.handler(recipient)
+    }
 }

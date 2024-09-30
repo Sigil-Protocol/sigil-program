@@ -1,12 +1,19 @@
 use crate::state::*;
 use anchor_lang::prelude::*;
-use std::str::from_utf8;
 
 #[derive(Accounts)]
+#[instruction(nonce_string: String)]
 pub struct CreateAsset<'info> {
     #[account(
+        mut,
+        seeds = [NETWORK_SEED],
+        bump
+    )]
+    pub network: Box<Account<'info, Network>>,
+
+    #[account(
         init,
-        seeds = [ASSET_SEED, payer.key().as_ref()],
+        seeds = [ASSET_SEED, payer.key().as_ref(), nonce_string.as_bytes()],
         bump,
         payer = payer,
         space = 8 + std::mem::size_of::<Asset>()
@@ -19,15 +26,9 @@ pub struct CreateAsset<'info> {
 }
 
 impl<'info> CreateAsset<'info> {
-    pub fn handler(
-        &mut self,
-        issuer: Pubkey,
-        owner: Pubkey,
-        mint: Pubkey,
-        amount: u64,
-        bump: u8,
-    ) -> Result<()> {
-        self.asset.create(issuer, owner, mint, amount, bump)?;
+    pub fn handler(&mut self, owner: Pubkey, bump: u8, metadata_uri: String) -> Result<()> {
+        self.asset
+            .create(self.payer.key(), owner, bump, metadata_uri)?;
         Ok(())
     }
 }

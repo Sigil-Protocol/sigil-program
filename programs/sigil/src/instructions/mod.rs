@@ -1,9 +1,12 @@
-mod create_asset;
-mod create_identity;
-pub mod init;
-mod update_identity;
+pub mod admin;
+pub mod asset;
+pub mod identity;
 
-pub use create_asset::*;
-pub use create_identity::*;
-pub use init::*;
-pub use update_identity::*;
+pub use admin::init::*;
+pub use asset::create_asset::*;
+pub use asset::transfer_asset::*;
+pub use identity::add_recovery_account::*;
+pub use identity::create_identity::*;
+pub use identity::recover::*;
+pub use identity::remove_recovery_account::*;
+pub use identity::update_identity::*;

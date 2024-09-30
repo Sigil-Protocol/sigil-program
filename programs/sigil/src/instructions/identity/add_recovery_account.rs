@@ -2,7 +2,7 @@ use crate::state::*;
 use anchor_lang::prelude::*;
 
 #[derive(Accounts)]
-pub struct UpdateIdentity<'info> {
+pub struct AddRecoveryAccount<'info> {
     #[account(
         mut,
         seeds = [NETWORK_SEED],
@@ -22,15 +22,10 @@ pub struct UpdateIdentity<'info> {
     pub system_program: Program<'info, System>,
 }
 
-impl<'info> UpdateIdentity<'info> {
-    pub fn handler(
-        &mut self,
-        metadata_uri: String,
-        metadata_merkle_root: Vec<u8>,
-        bump: u8,
-    ) -> Result<()> {
+impl<'info> AddRecoveryAccount<'info> {
+    pub fn handler(&mut self, recovery_account: Pubkey) -> Result<()> {
         self.identity
-            .update(metadata_uri, metadata_merkle_root, bump)?;
+            .add_recovery_account(self.payer.key(), recovery_account)?;
         Ok(())
     }
 }

@@ -3,7 +3,7 @@ use anchor_lang::prelude::*;
 use solana_program::pubkey;
 use std::str::from_utf8;
 
-pub const NETWORK_SEED: &[u8] = b"network";
+pub const NETWORK_SEED: &[u8] = b"sigil";
 pub const IDENTITY_SEED: &[u8] = b"identity";
 pub const RECOVERY_SEED: &[u8] = b"recovery";
 pub const DID_METHOD: &[u8] = b"did:sigil";
@@ -45,18 +45,17 @@ pub struct Identity {
     pub recovery_accounts: Vec<Pubkey>,
     pub metadata_uri: String,
     pub metadata_merkle_root: Vec<u8>,
+    pub bump: u8,
     pub created_at: i64,
     pub updated_at: i64,
-    pub bump: u8,
 }
 
 #[account]
 pub struct Asset {
-    pub issuer: Pubkey,
+    pub authority: Pubkey,
     pub owner: Pubkey,
     pub attestor: Option<Pubkey>,
-    pub mint: Pubkey,
-    pub amount: u64,
+    pub metadata_uri: String,
     pub bump: u8,
 }
 
@@ -97,6 +96,7 @@ impl Identity {
         self.owner = owner;
         self.did_method = from_utf8(DID_METHOD).unwrap().to_string();
         self.did_identifier = did_identifier;
+        self.recovery_accounts = vec![];
         self.metadata_uri = metadata_uri;
         self.metadata_merkle_root = metadata_merkle_root;
         self.created_at = Clock::get()?.unix_timestamp;
@@ -108,10 +108,15 @@ impl Identity {
 
     pub fn update(
         &mut self,
+        payer: Pubkey,
         metadata_uri: String,
         metadata_merkle_root: Vec<u8>,
         bump: u8,
     ) -> Result<()> {
+        if payer != self.owner {
+            return Err(errors::ErrorCode::Unauthorized.into());
+        }
+
         if metadata_uri.len() > MAX_URI_LENGTH {
             return Err(errors::ErrorCode::InvalidMetadataUri.into());
         }
@@ -124,16 +129,36 @@ impl Identity {
         Ok(())
     }
 
-    pub fn add_recovery_account(&mut self, recovery_account: Pubkey) -> Result<()> {
+    pub fn add_recovery_account(&mut self, payer: Pubkey, recovery_account: Pubkey) -> Result<()> {
+        if payer != self.owner {
+            return Err(errors::ErrorCode::Unauthorized.into());
+        }
+
+        if self.owner == recovery_account {
+            return Err(errors::ErrorCode::RecoveryAccountIsOwner.into());
+        }
+
         if self.recovery_accounts.len() >= 3 {
             return Err(errors::ErrorCode::MaxRecoveryAccounts.into());
+        }
+
+        if self.recovery_accounts.contains(&recovery_account) {
+            return Err(errors::ErrorCode::RecoveryAccountAlreadyExists.into());
         }
 
         self.recovery_accounts.push(recovery_account);
         Ok(())
     }
 
-    pub fn remove_recovery_account(&mut self, recovery_account: Pubkey) -> Result<()> {
+    pub fn remove_recovery_account(
+        &mut self,
+        payer: Pubkey,
+        recovery_account: Pubkey,
+    ) -> Result<()> {
+        if payer != self.owner {
+            return Err(errors::ErrorCode::Unauthorized.into());
+        }
+
         let index = self
             .recovery_accounts
             .iter()
@@ -149,21 +174,10 @@ impl Identity {
             return Err(errors::ErrorCode::RecoveryAccountNotFound.into());
         }
 
-        self.owner = new_owner;
-        Ok(())
-    }
-
-    pub fn delete(&mut self) -> Result<()> {
-        self.owner = Pubkey::new_unique();
-        self.did_method = "".to_string();
-        self.did_identifier = vec![];
+        // reset recovery accounts
         self.recovery_accounts = vec![];
-        self.metadata_uri = "".to_string();
-        self.metadata_merkle_root = vec![];
-        self.created_at = 0;
-        self.updated_at = 0;
-        self.bump = 0;
 
+        self.owner = new_owner;
         Ok(())
     }
 }
@@ -171,24 +185,30 @@ impl Identity {
 impl Asset {
     pub fn create(
         &mut self,
-        issuer: Pubkey,
+        authority: Pubkey,
         owner: Pubkey,
-        mint: Pubkey,
-        amount: u64,
         bump: u8,
+        metadata_uri: String,
     ) -> Result<()> {
-        self.issuer = issuer;
+        self.authority = authority;
         self.owner = owner;
         self.attestor = None;
-        self.mint = mint;
-        self.amount = amount;
         self.bump = bump;
-
+        self.metadata_uri = metadata_uri;
         Ok(())
     }
 
-    pub fn transfer(&mut self, new_owner: Pubkey) -> Result<()> {
-        self.owner = new_owner;
+    pub fn transfer(
+        &mut self,
+        payer: Pubkey,
+        asset_owner: Pubkey,
+        recipient: Pubkey,
+    ) -> Result<()> {
+        if payer != asset_owner {
+            return Err(errors::ErrorCode::Unauthorized.into());
+        }
+
+        self.owner = recipient;
         Ok(())
     }
 
@@ -198,16 +218,7 @@ impl Asset {
     }
 
     pub fn burn(&mut self, amount: u64) -> Result<()> {
-        if self.amount < amount {
-            return Err(errors::ErrorCode::AmountNotEnough.into());
-        }
-
-        self.amount -= amount;
-        Ok(())
-    }
-
-    pub fn mint(&mut self, amount: u64) -> Result<()> {
-        self.amount += amount;
+        self.owner = Pubkey::default();
         Ok(())
     }
 }
