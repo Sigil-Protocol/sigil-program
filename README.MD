@@ -1,6 +1,6 @@
 # Sigil: Decentralized Identity Protocol on Solana
 
-**Sigil** is a decentralized identity protocol developed on the Solana blockchain. It empowers users to create and manage self-sovereign identities, build financial reputations, and issue or transfer tokenized assets permissionally. The core objective of Sigil is to provide the essential primitives for the creation of more advanced decentralized applications as part of the **Finternet**.
+**Sigil** is a decentralized identity protocol developed on the Solana blockchain. It empowers users to create and manage self-sovereign identities, build financial reputations, and issue or transfer tokenized assets permissionlessly. The core objective of Sigil is to provide the essential primitives for the creation of more advanced decentralized applications as part of the **Finternet**.
 
 ## Key Features
 
